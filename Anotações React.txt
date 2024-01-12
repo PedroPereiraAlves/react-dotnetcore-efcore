@@ -1,0 +1,74 @@
+Para startar um projeto react é necessário usar o comando npm run start
+
+por padrão o react sempre que entra em um diretorio ele procura por um arquivo index.JS
+
+
+o arquivo JS start do react é o arquivo "APP.JS"
+
+
+O classname só está sendo usando pq estamos trabalhando com tags html dentro de um arquivo JS
+e o class padrão do HTML não poderia ser usado pois no JS a palava reservada "class" é utilziada para criar uma nova classe
+
+essa é sintaxe de um JSX ou "arquivo js extendido" basicamente utilizando elementos html no JS
+<div className="App">
+      <header className="App-header">
+        <img src={logo} className="App-logo" alt="logo" />
+        <ul>
+          <li>{atividade[0].id} {atividade[0].descricao}</li>
+          <li>Segunda atividade</li>
+          <li>Terceira atividade</li>
+          <li>Quarta atividade</li>
+        </ul>
+      </header>
+    </div>
+PARTICULARIEDADE REACT sempre que tivemos uma lista o react esperava que essa lista tenha uma chave unica ou uma unique key como o codigo abaixo
+  <li key={ativ.id} className="list-group-item">{ativ.id} - {ativ.descricao}</li>
+
+
+Nos arquivos JSX nós não podemos ter mais de um elemento HTML porém para utlizarmos multiplos elementos HTML no JSX precisamos usar a palavra reservada fragment
+<Fragment>
+    <App />
+    <App />
+    <App />
+    <App />
+  </Fragment>
+
+exemplo utilização fragment para dois ou mais elementos
+<Fragment>
+      <form>
+
+      </form>
+      <div className="mt-3">
+          <ul className="list-group">
+            {atividade.map(ativ => (
+              <li key={ativ.id} className="list-group-item">{ativ.id} - {ativ.descricao}</li>
+            ))}
+          </ul>
+      </div>
+    </Fragment>
+
+Trecho de codigo JSX para referenteciar algo de um objeto e exibilo na tela sempre devemos usar chaves {} para exibir valores JS
+ const atividade = [
+    {
+      "id": 1,
+      "descricao": "Priemira atividade"
+    },
+    {
+      "id": 2,
+      "descricao": "Priemira Segunda"
+    },
+  ]
+ <ul className="list-group">
+          {atividade.map(ativ => (
+             <li className="list-group-item">{ativ.descricao}</li>
+          ))}
+        </ul>
+
+bootstrap react documentação
+https://react-bootstrap.netlify.app/docs/getting-started/introduction
+
+
+
+BOOTSTRAP CLASS
+container => gera um espaçamento das laterais
+mt-3 = margin top e o numero referencia a quantidade de espaçamento do top da pagina
