@@ -1,124 +1,208 @@
-import React, { Fragment, useEffect, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react';
+import {
+  LIMITES,
+  PRIORIDADES,
+  atividadeVazia,
+  normalizarAtividade,
+  validarAtividade,
+} from '../atividade';
 
+const campos = ['titulo', 'prioridade', 'descricao'];
 
-const atividadeInicial = {
-    id: 0,
-    titulo: '',
-    prioridade: 0,
-    descricao: ''
-}
-
-export default function AtividadeForm(props) {
-  const [atividade, setAtividade] = useState(atividadeAtual());
-
-  useEffect(() => {
-      console.log("props.ativSelecionada:", props.ativSelecionada);
-      if(props.ativSelecionada.id !== 0)
-          setAtividade(props.ativSelecionada)
-  }, [props.ativSelecionada]);
-
-  const inputTextHandler = (e) => {
-      const {name, value} = e.target;
-      setAtividade({ ...atividade, [name]: value})
+export default function AtividadeForm({
+  atividadeSelecionada,
+  onAdicionar,
+  onAtualizar,
+  onCancelar,
+}) {
+  const baseId = useId();
+  const tituloRef = useRef(null);
+  const prioridadeRef = useRef(null);
+  const descricaoRef = useRef(null);
+  const refs = {
+    titulo: tituloRef,
+    prioridade: prioridadeRef,
+    descricao: descricaoRef,
   };
+  const [atividade, setAtividade] = useState(atividadeSelecionada);
+  const [erros, setErros] = useState({});
+  const [selecaoAtual, setSelecaoAtual] = useState(atividadeSelecionada);
+  const editando = atividade.id !== 0;
+  const temErros = Object.keys(erros).length > 0;
 
-  const handlerCancelar = (e) => {
-      e.preventDefault(); 
-    
-      props.cancelarAtividade();
-
-      setAtividade(atividadeInicial);
-    }
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-
-    if(props.ativSelecionada.id !== 0)
-      props.atualizarAtividade(atividade);
-    else
-      props.addAtividade(atividade);
-
-      setAtividade(atividadeInicial);
+  if (selecaoAtual !== atividadeSelecionada) {
+    setSelecaoAtual(atividadeSelecionada);
+    setAtividade(atividadeSelecionada.id !== 0 ? atividadeSelecionada : atividadeVazia);
+    setErros({});
   }
 
-  function atividadeAtual(){
-    if (props.ativSelecionada.id !== 0){
-        return props.ativSelecionada;
+  useEffect(() => {
+    if (atividadeSelecionada.id !== 0) {
+      tituloRef.current?.focus();
     }
-    else{
-      return atividadeInicial;
+  }, [atividadeSelecionada]);
+
+  function atualizarCampo(event) {
+    const { name, value } = event.target;
+    setAtividade((atual) => ({ ...atual, [name]: value }));
+    setErros((atual) => {
+      if (!atual[name]) {
+        return atual;
+      }
+      const seguintes = { ...atual };
+      delete seguintes[name];
+      return seguintes;
+    });
+  }
+
+  function limparFormulario() {
+    setAtividade(atividadeVazia);
+    setErros({});
+    tituloRef.current?.focus();
+  }
+
+  function handleSubmit(event) {
+    event.preventDefault();
+    const encontrados = validarAtividade(atividade);
+    setErros(encontrados);
+
+    const primeiroInvalido = campos.find((campo) => encontrados[campo]);
+    if (primeiroInvalido) {
+      refs[primeiroInvalido].current?.focus();
+      return;
     }
-  };
+
+    const normalizada = normalizarAtividade(atividade);
+    if (editando) {
+      onAtualizar(normalizada);
+    } else {
+      onAdicionar(normalizada);
+    }
+    limparFormulario();
+  }
+
+  function handleCancelar() {
+    onCancelar();
+    limparFormulario();
+  }
+
+  function campoInvalido(nome) {
+    return erros[nome] ? 'true' : undefined;
+  }
 
   return (
-    <Fragment>
-    <h1>Atividade {atividade.id !== 0 ? atividade.id : ""}</h1>
-    <form className="row g-3" onSubmit={handleSubmit}>
-            <div className="col-md-6">
-                <label  className="form-label">Título</label>
-                <input
-                  name = "titulo"
-                  value={atividade.titulo}
-                  onChange={inputTextHandler}  
-                  id="titulo" 
-                  type="text" 
-                  className="form-control"
-                />
+    <section aria-labelledby={`${baseId}-titulo-secao`}>
+      <h2 id={`${baseId}-titulo-secao`} className="h4">
+        {editando ? `Editar atividade ${atividade.id}` : 'Nova atividade'}
+      </h2>
+      <p className="text-muted">Título e prioridade são obrigatórios. A descrição é opcional.</p>
+      {temErros && (
+        <div className="alert alert-danger" role="alert">
+          Revise os campos destacados antes de salvar.
+        </div>
+      )}
+      <form className="row g-3" onSubmit={handleSubmit} noValidate>
+        <div className="col-md-6">
+          <label className="form-label" htmlFor={`${baseId}-titulo`}>
+            Título
+          </label>
+          <input
+            ref={tituloRef}
+            id={`${baseId}-titulo`}
+            name="titulo"
+            type="text"
+            className={`form-control${erros.titulo ? ' is-invalid' : ''}`}
+            value={atividade.titulo}
+            onChange={atualizarCampo}
+            maxLength={LIMITES.titulo}
+            aria-required="true"
+            aria-invalid={campoInvalido('titulo')}
+            aria-describedby={erros.titulo ? `${baseId}-titulo-erro` : undefined}
+            autoComplete="off"
+          />
+          {erros.titulo && (
+            <div id={`${baseId}-titulo-erro`} className="invalid-feedback">
+              {erros.titulo}
             </div>
-            <div className="col-md-6">
-              <label className="form-label">Prioridade</label>
-              <select
-                name = "prioridade"
-                value={atividade.prioridade}
-                onChange={inputTextHandler} 
-                id="prioridade" 
-                className="form-select"
+          )}
+        </div>
+        <div className="col-md-6">
+          <label className="form-label" htmlFor={`${baseId}-prioridade`}>
+            Prioridade
+          </label>
+          <select
+            ref={prioridadeRef}
+            id={`${baseId}-prioridade`}
+            name="prioridade"
+            className={`form-select${erros.prioridade ? ' is-invalid' : ''}`}
+            value={atividade.prioridade}
+            onChange={atualizarCampo}
+            aria-required="true"
+            aria-invalid={campoInvalido('prioridade')}
+            aria-describedby={erros.prioridade ? `${baseId}-prioridade-erro` : undefined}
+          >
+            <option value="">Selecione...</option>
+            {Object.entries(PRIORIDADES).map(([valor, prioridade]) => (
+              <option key={valor} value={valor}>
+                {prioridade.label}
+              </option>
+            ))}
+          </select>
+          {erros.prioridade && (
+            <div id={`${baseId}-prioridade-erro`} className="invalid-feedback">
+              {erros.prioridade}
+            </div>
+          )}
+        </div>
+        <div className="col-12">
+          <label className="form-label" htmlFor={`${baseId}-descricao`}>
+            Descrição
+          </label>
+          <textarea
+            ref={descricaoRef}
+            id={`${baseId}-descricao`}
+            name="descricao"
+            className={`form-control${erros.descricao ? ' is-invalid' : ''}`}
+            value={atividade.descricao}
+            onChange={atualizarCampo}
+            maxLength={LIMITES.descricao}
+            rows={3}
+            aria-invalid={campoInvalido('descricao')}
+            aria-describedby={erros.descricao ? `${baseId}-descricao-erro` : `${baseId}-descricao-ajuda`}
+          />
+          <div id={`${baseId}-descricao-ajuda`} className="form-text">
+            Opcional. Até {LIMITES.descricao} caracteres.
+          </div>
+          {erros.descricao && (
+            <div id={`${baseId}-descricao-erro`} className="invalid-feedback">
+              {erros.descricao}
+            </div>
+          )}
+        </div>
+        <div className="col-12">
+          {editando ? (
+            <>
+              <button className="btn btn-outline-success me-2" type="submit">
+                <i className="fas fa-check me-2" aria-hidden="true" />
+                Salvar alterações
+              </button>
+              <button
+                className="btn btn-outline-secondary"
+                type="button"
+                onClick={handleCancelar}
               >
-                <option defaultValue="0">Selecione...</option>
-                <option value="1">Baixa</option>
-                <option value="2">Normal</option>
-                <option value="3">Alta</option>
-              </select>
-           </div>
-            <div className="col-md-12">
-                <label  className="form-label">Descricao</label>
-                <textarea 
-                  name = "descricao"
-                  value={atividade.descricao}
-                  onChange={inputTextHandler} 
-                  id="descricao" 
-                  type="text" 
-                  className="form-control"
-                />
-            <hr />
-            </div>
-            <div className="col-12 mt-0">
-              {
-                  atividade.id === 0 ?(
-                  <button 
-                      className="btn btn-outline-secondary" 
-                        type="submit"
-                      >
-                        <i className="fas fa-plus me-2"></i> 
-                       Atividade
-                  </button>
-                  ):(
-                    <>
-                    <button className="btn btn-outline-success me-2"  type = "submit"> 
-                    <i className="fas fa-plus me-2"></i> 
-                       Salvar
-                    </button>
-                    <button 
-                        className="btn btn-outline-warning" 
-                        onClick={handlerCancelar}
-                    > 
-                    <i className="fas fa-plus me-2"></i> 
-                       Cancelar
-                    </button>
-                  </>
-              )}
-            </div>
-        </form>
-        </Fragment>
+                <i className="fas fa-xmark me-2" aria-hidden="true" />
+                Cancelar edição
+              </button>
+            </>
+          ) : (
+            <button className="btn btn-outline-secondary" type="submit">
+              <i className="fas fa-plus me-2" aria-hidden="true" />
+              Adicionar atividade
+            </button>
+          )}
+        </div>
+      </form>
+    </section>
   );
 }

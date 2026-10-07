@@ -1,79 +1,107 @@
-import { Fragment, useEffect, useState } from 'react';
+import { useState } from 'react';
 import './App.css';
-import AtividadeForm from './components/AtividadeForm'
-import AtividadeLista from './components/AtividadeLista'
-import atividade from './components/Atividade';
+import AtividadeForm from './components/AtividadeForm';
+import AtividadeLista from './components/AtividadeLista';
+import { atividadeVazia } from './atividade';
 
-let initialState = [
+const atividadesIniciais = [
   {
-    "id": 1,
-    "prioridade":"2",
-    "titulo":"titulo",
-    "descricao": "Priemira atividade"
+    id: 1,
+    prioridade: '1',
+    titulo: 'Revisar documentação',
+    descricao: 'Atualizar o passo a passo de execução do projeto.',
   },
   {
-    "id": 2,
-    "prioridade":"3",
-    "titulo":"titulo",
-    "descricao": "Priemira Segunda"
+    id: 2,
+    prioridade: '2',
+    titulo: 'Organizar o backlog',
+    descricao: 'Ordenar as atividades da semana por prioridade.',
   },
   {
-    "id": 3,
-    "prioridade":"3",
-    "titulo":"titulo",
-    "descricao": "Priemira Segunda"
+    id: 3,
+    prioridade: '3',
+    titulo: 'Corrigir o formulário',
+    descricao: 'Impedir o cadastro de atividades sem título.',
   },
 ];
 
+function proximoId(lista) {
+  return lista.reduce((maior, item) => Math.max(maior, item.id), 0) + 1;
+}
+
 function App() {
-  const [index, setIndex] = useState(0);
-  const [atividade, setAtividade] = useState(initialState);
-  const [atividades, setAtividades] = useState({id: 0});
+  const [atividades, setAtividades] = useState(atividadesIniciais);
+  const [atividadeSelecionada, setAtividadeSelecionada] = useState(atividadeVazia);
+  const [mensagem, setMensagem] = useState('');
 
-
-
-  useEffect(() => {
-      atividade.length <= 0 ? setIndex(1) : setIndex( Math.max.apply(Math, atividade.map(item => item.id) ) + 1,)
-  },[atividade])
-
-  function addAtividade(ativ){
-    setAtividade([ ... atividade, { ... ativ, id:index }]);
+  function adicionarAtividade(atividade) {
+    setAtividades((lista) => [
+      ...lista,
+      { ...atividade, id: proximoId(lista) },
+    ]);
+    setMensagem(`Atividade "${atividade.titulo}" adicionada.`);
   }
 
-  function cancelarAtividade(){
-    setAtividades({id: 0});
+  function atualizarAtividade(atividade) {
+    setAtividades((lista) => lista.map((item) => (
+      item.id === atividade.id ? atividade : item
+    )));
+    setAtividadeSelecionada(atividadeVazia);
+    setMensagem(`Atividade "${atividade.titulo}" atualizada.`);
   }
 
-  function deletarAtividade(id){
-    const atividadesFiltradas = atividade.filter(atividade => atividade.id !== id);
-    setAtividade([...atividadesFiltradas]);
+  function cancelarAtividade() {
+    setAtividadeSelecionada(atividadeVazia);
+    setMensagem('Edição cancelada.');
   }
 
-  function pegarAtividade(id){
-      const atividadeEncontrada = atividade.filter(atividade => atividade.id === id);
-      setAtividades(atividadeEncontrada[0])
+  function excluirAtividade(id) {
+    const removida = atividades.find((item) => item.id === id);
+    setAtividades((lista) => lista.filter((item) => item.id !== id));
+    if (atividadeSelecionada.id === id) {
+      setAtividadeSelecionada(atividadeVazia);
+    }
+    setMensagem(removida
+      ? `Atividade "${removida.titulo}" excluída.`
+      : 'Atividade excluída.');
   }
 
-  function atualizarAtividade(ativ){
-    setAtividade(atividade.map(item => item.id === ativ.id ? ativ : item));
-    setAtividades({id: 0});
+  function selecionarAtividade(id) {
+    const encontrada = atividades.find((item) => item.id === id);
+    if (encontrada) {
+      setAtividadeSelecionada({ ...encontrada });
+      setMensagem(`Editando "${encontrada.titulo}".`);
+    }
   }
 
   return (
-    <Fragment>
+    <div className="container py-4">
+      <header className="mb-4">
+        <h1 className="h3 mb-1">Atividades</h1>
+        <p className="text-muted mb-0">
+          Cadastre, edite e organize atividades por prioridade.
+        </p>
+      </header>
+      <main>
+        {mensagem && (
+          <div className="alert alert-success" role="status">
+            {mensagem}
+          </div>
+        )}
         <AtividadeForm
-          addAtividade={addAtividade}
-          atualizarAtividade={atualizarAtividade}
-          cancelarAtividade={cancelarAtividade}
-          ativSelecionada={atividades}
-          atividade={atividade}
+          atividadeSelecionada={atividadeSelecionada}
+          onAdicionar={adicionarAtividade}
+          onAtualizar={atualizarAtividade}
+          onCancelar={cancelarAtividade}
         />
-        <AtividadeLista 
-          atividade={atividade}
-          deletarAtividade ={deletarAtividade}
-          pegarAtividade = {pegarAtividade}
+        <AtividadeLista
+          atividades={atividades}
+          selecionadaId={atividadeSelecionada.id}
+          onEditar={selecionarAtividade}
+          onExcluir={excluirAtividade}
         />
-    </Fragment>
+      </main>
+    </div>
   );
 }
 
